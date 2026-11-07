@@ -1,0 +1,132 @@
+@model EnterpriseSystem.Models.SalesOrder
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    ViewData["Title"] = "Sales Orders";
+    // جلب اسم اليوزر الحالي من الـ Session
+    string currentUser = HttpContextAccessor.HttpContext?.Session.GetString("Username") ?? "";
+
+    // التحقق الشامل للصلاحيات (Session + Roles)
+    bool isSystemAdmin = currentUser.Equals("admin", StringComparison.OrdinalIgnoreCase) || User.IsInRole("Admin");
+    bool canApprove = isSystemAdmin || 
+                      currentUser.Equals("sales_approve", StringComparison.OrdinalIgnoreCase) || 
+                      User.IsInRole("Sales_Approver") || 
+                      User.IsInRole("sales_approve") || 
+                      User.IsInRole("Sales Approver");
+}
+
+<style>
+    /* منع وإخفاء أي حقل بحث تلقائي قد يظهر داخل الصفحة */
+    input[placeholder*="Search"], input[type="search"] {
+        display: none !important;
+    }
+</style>
+
+<h1>Sales Orders</h1>
+
+<div class="mt-3">
+    <h4>Sales Order #@Model.Id</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.OrderDate)
+        </dt>
+        <dd class="col-sm-10">
+            @Model.OrderDate
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Status)
+        </dt>
+        <dd class="col-sm-10">
+            <span class="badge @(Model.Status == "Completed" ? "bg-success" : Model.Status == "Cancelled" ? "bg-danger" : "bg-warning text-dark")">
+                @Model.Status
+            </span>
+        </dd>
+        <dt class="col-sm-2">
+            Branch
+        </dt>
+        <dd class="col-sm-10">
+            @Model.Branch?.Name
+        </dd>
+        <dt class="col-sm-2">
+            Customer
+        </dt>
+        <dd class="col-sm-10">
+            @Model.Customer?.Name
+        </dd>
+        <dt class="col-sm-2">
+            Employee / User
+        </dt>
+        <dd class="col-sm-10">
+            @Model.User?.FullName
+        </dd>
+    </dl>
+</div>
+
+<hr />
+<div class="mb-3">
+    <h4>Sales Order Items</h4>
+</div>
+
+@if (Model.SalesOrderItems != null && Model.SalesOrderItems.Count > 0)
+{
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Product Name</th>
+                <th>Unit Price</th>
+                <th>Quantity</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.SalesOrderItems)
+            {
+                <tr>
+                    <td>@item.Product?.Name</td>
+                    <td>@item.UnitPrice.ToString("C")</td>
+                    <td>@item.Quantity</td>
+                    <td>@((item.Quantity * item.UnitPrice).ToString("C"))</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p class="text-muted">No products found for this order.</p>
+}
+
+<div class="mt-3 d-flex justify-content-between align-items-center">
+    <div>
+        <!-- زر التعديل يظهر فقط للأدمن أو للكريتور (sales_create) -->
+        @if (currentUser == "admin" || currentUser == "sales_create" || User.IsInRole("Admin") || User.IsInRole("Sales_Creator"))
+        {
+            <a asp-action="Edit" asp-route-id="@Model?.Id" class="btn btn-primary">Edit Order</a>
+        }
+        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+    </div>
+
+    <!-- زراير الاعتماد والإلغاء تظهر فقط للأدمن أو للـ Approver عندما تكون الحالة Pending -->
+    @if (canApprove && Model.Status == "Pending")
+    {
+        <div>
+            <!-- فورم الموافقة والإكمال -->
+            <form asp-action="UpdateStatus" asp-controller="SalesOrders" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Id" />
+                <input type="hidden" name="status" value="Completed" />
+                <button type="submit" class="btn btn-success fw-bold" onclick="return confirm('Are you sure you want to approve and complete this order?');">Approve & Complete</button>
+            </form>
+
+            <!-- فورم إلغاء الطلب -->
+            <form asp-action="UpdateStatus" asp-controller="SalesOrders" method="post" class="d-inline ms-2">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Id" />
+                <input type="hidden" name="status" value="Cancelled" />
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this order?');">Cancel Order</button>
+            </form>
+        </div>
+    }
+</div>

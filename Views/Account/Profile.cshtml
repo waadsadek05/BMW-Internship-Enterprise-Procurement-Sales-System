@@ -1,0 +1,60 @@
+@model EnterpriseSystem.Models.ApplicationUser
+
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<div class="container mt-4">
+    <h2>My Profile</h2>
+    <hr />
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-6">
+            <form asp-action="Profile" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <input type="hidden" asp-for="Id" />
+
+                <div class="mb-3">
+                    <label class="control-label fw-bold">Full Name</label>
+                    <input type="text" name="fullName" value="@Model.FullName" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="control-label fw-bold">Email</label>
+                    <input type="email" name="email" value="@Model.Email" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="control-label fw-bold">Username</label>
+                    <input type="text" name="username" value="@Model.Username" class="form-control" required />
+                </div>
+
+                <hr />
+                <h5 class="text-secondary">Change Password (Optional)</h5>
+
+                <div class="mb-3">
+                    <label class="control-label fw-bold">Current Password</label>
+                    <input type="password" name="currentPassword" class="form-control" placeholder="Enter current password to change" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="control-label fw-bold">New Password</label>
+                    <input type="password" name="newPassword" class="form-control" placeholder="Leave blank if you don't want to change" />
+                </div>
+
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">Back to Home</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

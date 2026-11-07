@@ -1,0 +1,170 @@
+erDiagram
+    Branch {
+        int Id PK
+        string Name
+        string Location
+    }
+
+    Warehouse {
+        int Id PK
+        int BranchId FK
+        string Name
+        string Location
+    }
+
+    ApplicationUser {
+        string Id PK
+        string FullName
+        string Email
+        string Username
+        string Password
+        bool IsActive
+        int BranchId FK
+    }
+
+    Role {
+        string Id PK
+        string Name
+    }
+
+    UserRole {
+        int Id PK
+        string UserId FK
+        string RoleId FK
+    }
+
+    Category {
+        int Id PK
+        string Name
+    }
+
+    Product {
+        int Id PK
+        string Name
+        string SKU
+        decimal UnitPrice
+        int CategoryId FK
+    }
+
+    BranchInventory {
+        int Id PK
+        int WarehouseId FK
+        int ProductId FK
+        int StockQuantity
+    }
+
+    Vendor {
+        int Id PK
+        string Name
+        string ContactInfo
+    }
+
+    PurchaseOrder {
+        int Id PK
+        int VendorId FK
+        int BranchId FK
+        datetime OrderDate
+        string Status
+    }
+
+    PurchaseOrderItem {
+        int Id PK
+        int PurchaseOrderId FK
+        int ProductId FK
+        int Quantity
+        decimal UnitCost
+    }
+
+    VendorInvoice {
+        int Id PK
+        int PurchaseOrderId FK
+        string InvoiceNumber
+        datetime InvoiceDate
+        decimal TotalAmount
+        string Status
+    }
+
+    Customer {
+        int Id PK
+        string Name
+        string Phone
+    }
+
+    SalesOrder {
+        int Id PK
+        int CustomerId FK
+        int BranchId FK
+        string UserId FK
+        datetime OrderDate
+        string Status
+    }
+
+    SalesOrderItem {
+        int Id PK
+        int SalesOrderId FK
+        int ProductId FK
+        int Quantity
+        decimal UnitPrice
+    }
+
+    SalesInvoice {
+        int Id PK
+        int SalesOrderId FK
+        string InvoiceNumber
+        datetime InvoiceDate
+        decimal TotalAmount
+    }
+
+    InvoiceItem {
+        int Id PK
+        int SalesInvoiceId FK
+        int ProductId FK
+        int Quantity
+        decimal UnitPrice
+    }
+
+    CreditNote {
+        int Id PK
+        int SalesInvoiceId FK
+        datetime ReturnDate
+        string Reason
+        decimal RefundAmount
+    }
+
+    CreditNoteItem {
+        int Id PK
+        int CreditNoteId FK
+        int ProductId FK
+        int Quantity
+        decimal UnitPrice
+    }
+
+    %% العلاقات الأساسية (مطابقة للـ FKs الموجودة فعليًا في schema.sql)
+    Branch ||--o{ Warehouse : "has warehouses"
+    Warehouse ||--o{ BranchInventory : "stores inventory"
+    Branch ||--o{ ApplicationUser : "has employees"
+    Product ||--o{ BranchInventory : "tracked in"
+    Category ||--o{ Product : "categorizes"
+
+    Vendor ||--o{ PurchaseOrder : "receives PO"
+    Branch ||--o{ PurchaseOrder : "requested by branch"
+    PurchaseOrder ||--o{ PurchaseOrderItem : "includes items"
+    Product ||--o{ PurchaseOrderItem : "ordered as"
+    PurchaseOrder ||--o{ VendorInvoice : "billed by"
+
+    Customer ||--o{ SalesOrder : "places SO"
+    Branch ||--o{ SalesOrder : "sold from branch"
+    ApplicationUser ||--o{ SalesOrder : "processed by"
+    SalesOrder ||--o{ SalesOrderItem : "contains items"
+    Product ||--o{ SalesOrderItem : "sold as"
+    SalesOrder ||--o{ SalesInvoice : "generates invoice"
+
+    SalesInvoice ||--o{ InvoiceItem : "contains items"
+    Product ||--o{ InvoiceItem : "billed as"
+
+    SalesInvoice ||--o{ CreditNote : "has returns"
+    CreditNote ||--o{ CreditNoteItem : "includes returned items"
+    Product ||--o{ CreditNoteItem : "returned as"
+
+    ApplicationUser ||--o{ UserRole : "assigned"
+    Role ||--o{ UserRole : "includes"

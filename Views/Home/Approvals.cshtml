@@ -1,0 +1,186 @@
+@{
+    ViewData["Title"] = "Pending Approvals Hub";
+
+    var poCount = ViewBag.PendingPOs != null ? ((IEnumerable<dynamic>)ViewBag.PendingPOs).Count() : 0;
+    var soCount = ViewBag.PendingSOs != null ? ((IEnumerable<dynamic>)ViewBag.PendingSOs).Count() : 0;
+    var invCount = ViewBag.PendingVendorInvoices != null ? ((IEnumerable<dynamic>)ViewBag.PendingVendorInvoices).Count() : 0;
+}
+
+<div class="container-fluid mt-4 mb-5">
+    <!-- رأس الصفحة -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-clipboard-check text-primary me-2"></i> Pending Approvals & Actions Required</h2>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back to Home</a>
+    </div>
+
+    <!-- أزرار التنقل السريع (تظهر حسب الصلاحية) -->
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        @if (User.IsInRole("Admin") || User.IsInRole("PO_Approver"))
+        {
+            <a href="#po-section" class="btn btn-outline-warning text-dark fw-bold">
+                <i class="fas fa-shopping-cart me-1"></i> Purchase Orders <span class="badge bg-warning text-dark ms-1">@poCount</span>
+            </a>
+            <a href="#inv-section" class="btn btn-outline-danger fw-bold">
+                <i class="fas fa-file-invoice-dollar me-1"></i> Vendor Invoices <span class="badge bg-danger ms-1">@invCount</span>
+            </a>
+        }
+
+        @if (User.IsInRole("Admin"))
+        {
+            <a href="#so-section" class="btn btn-outline-info text-dark fw-bold">
+                <i class="fas fa-file-invoice me-1"></i> Sales Orders <span class="badge bg-info text-dark ms-1">@soCount</span>
+            </a>
+        }
+    </div>
+
+    <!-- 1. Purchase Orders (تظهر لمسؤول الـ PO والأدمن فقط) -->
+    @if (User.IsInRole("Admin") || User.IsInRole("PO_Approver"))
+    {
+        <div id="po-section" class="row mb-5">
+            <div class="col-12">
+                <div class="card shadow-sm border-warning">
+                    <div class="card-header bg-warning text-dark fw-bold py-3 d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-shopping-cart me-2"></i> Pending Purchase Orders (POs)</span>
+                        <span class="badge bg-dark text-white fs-6">@poCount Pending</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-3">PO ID / Number</th>
+                                        <th>Date</th>
+                                        <th class="text-end pe-3">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (poCount > 0)
+                                    {
+                                        foreach (var po in ViewBag.PendingPOs)
+                                        {
+                                            <tr>
+                                                <td class="ps-3 fw-bold">@po.Id</td>
+                                                <td>@(po.OrderDate != null ? po.OrderDate.ToString("yyyy-MM-dd") : "N/A")</td>
+                                                <td class="text-end pe-3">
+                                                    <a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@po.Id" class="btn btn-sm btn-outline-primary">Review</a>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted py-4">No pending purchase orders found.</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- 2. Sales Orders (تظهر لمسؤول الـ Sales والأدمن فقط) -->
+    @if (User.IsInRole("Admin") || User.IsInRole("Sales_Approver") || User.IsInRole("SO_Approver"))
+    {
+        <div id="so-section" class="row mb-5">
+            <div class="col-12">
+                <div class="card shadow-sm border-info">
+                    <div class="card-header bg-info text-white fw-bold py-3 d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-file-invoice me-2"></i> Pending Sales Orders (SOs)</span>
+                        <span class="badge bg-dark text-white fs-6">@soCount Pending</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-3">SO ID / Number</th>
+                                        <th>Date</th>
+                                        <th class="text-end pe-3">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (soCount > 0)
+                                    {
+                                        foreach (var so in ViewBag.PendingSOs)
+                                        {
+                                            <tr>
+                                                <td class="ps-3 fw-bold">@so.Id</td>
+                                                <td>@(so.OrderDate != null ? so.OrderDate.ToString("yyyy-MM-dd") : "N/A")</td>
+                                                <td class="text-end pe-3">
+                                                    <a asp-controller="SalesOrders" asp-action="Details" asp-route-id="@so.Id" class="btn btn-sm btn-outline-info text-dark">Review</a>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted py-4">No pending sales orders found.</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- 3. Vendor Invoices (تظهر لمسؤول الـ PO والأدمن فقط) -->
+    @if (User.IsInRole("Admin") || User.IsInRole("PO_Approver"))
+    {
+        <div id="inv-section" class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-danger">
+                    <div class="card-header bg-danger text-white fw-bold py-3 d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-file-invoice-dollar me-2"></i> Pending Vendor Invoices (Awaiting Payment)</span>
+                        <span class="badge bg-dark text-white fs-6">@invCount Pending</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-3">Invoice Number</th>
+                                        <th>Purchase Order ID</th>
+                                        <th>Total Amount</th>
+                                        <th>Invoice Date</th>
+                                        <th class="text-end pe-3">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (invCount > 0)
+                                    {
+                                        foreach (var inv in ViewBag.PendingVendorInvoices)
+                                        {
+                                            <tr>
+                                                <td class="ps-3 fw-bold">@inv.InvoiceNumber</td>
+                                                <td>@inv.PurchaseOrderId</td>
+                                                <td class="text-success fw-bold">@inv.TotalAmount.ToString("N2")</td>
+                                                <td>@(inv.InvoiceDate != null ? inv.InvoiceDate.ToString("yyyy-MM-dd") : "N/A")</td>
+                                                <td class="text-end pe-3">
+                                                    <a asp-controller="VendorInvoices" asp-action="Details" asp-route-id="@inv.Id" class="btn btn-sm btn-outline-danger">Review / Pay</a>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted py-4">No pending vendor invoices found.</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

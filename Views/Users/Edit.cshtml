@@ -1,0 +1,67 @@
+@model EnterpriseSystem.Models.ApplicationUser
+
+@{
+    ViewData["Title"] = "Edit User";
+}
+
+<div class="mb-3">
+    <h2>Edit User</h2>
+</div>
+
+<hr />
+
+<div class="row">
+    <div class="col-md-6">
+        <form asp-action="Edit">
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="IsActive" />
+
+            <div class="mb-3">
+                <label asp-for="FullName" class="form-label"></label>
+                <input asp-for="FullName" class="form-control" />
+                <span asp-validation-for="FullName" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Username" class="form-label"></label>
+                <input asp-for="Username" class="form-control" />
+                <span asp-validation-for="Username" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-control" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Branch</label>
+                <select asp-for="BranchId" class="form-select" asp-items="ViewBag.Branches">
+                    <option value="">-- Select Branch (Optional) --</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Assign Role</label>
+                <select name="selectedRoleId" class="form-select" asp-items="ViewBag.Roles">
+                    <option value="">-- Select Role (Optional) --</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <button type="submit" class="btn btn-success px-4">Save</button>
+                <a asp-action="Index" class="btn btn-secondary ms-2">Back to List</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

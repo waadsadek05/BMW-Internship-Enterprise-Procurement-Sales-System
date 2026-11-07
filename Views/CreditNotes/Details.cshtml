@@ -1,0 +1,71 @@
+@model EnterpriseSystem.Models.CreditNote
+
+@{
+    ViewData["Title"] = "Credit Note Details";
+}
+
+<div class="container-fluid mt-4">
+    <h2>Credit Note Details</h2>
+    <hr />
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-secondary text-white">Summary Information</div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Return Date</dt>
+                <dd class="col-sm-9">@Model.ReturnDate.ToString("dd/MM/yyyy hh:mm:ss tt")</dd>
+
+                <dt class="col-sm-3">Reason</dt>
+                <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.Reason) ? "N/A" : Model.Reason)</dd>
+
+                <dt class="col-sm-3">Refund Amount</dt>
+                <dd class="col-sm-9">@Model.RefundAmount.ToString("N2")</dd>
+
+                <dt class="col-sm-3">Invoice Number</dt>
+                <dd class="col-sm-9">@Model.SalesInvoice?.InvoiceNumber</dd>
+            </dl>
+        </div>
+    </div>
+
+    <!-- جدول الأصناف المرتجعة في هذا الإشعار -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-dark text-white">Returned Items</div>
+        <div class="card-body p-0">
+            <table class="table table-bordered mb-0">
+                <thead>
+                    <tr>
+                        <th>Product Name / SKU</th>
+                        <th>Returned Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.CreditNoteItems != null && Model.CreditNoteItems.Any())
+                    {
+                        foreach (var item in Model.CreditNoteItems)
+                        {
+                            <tr>
+                                <td>@(item.Product?.Name ?? item.Product?.Sku ?? "Product #" + item.ProductId)</td>
+                                <td>@item.Quantity</td>
+                                <td>@item.UnitPrice.ToString("N2")</td>
+                                <td>@((item.Quantity * item.UnitPrice).ToString("N2"))</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No items found for this credit note.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div>
+        <a asp-action="Edit" asp-route-id="@Model?.Id" class="btn btn-primary">Edit</a> |
+        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+    </div>
+</div>

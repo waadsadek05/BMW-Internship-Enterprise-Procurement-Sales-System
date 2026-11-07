@@ -1,0 +1,206 @@
+@model EnterpriseSystem.Models.CreditNote
+
+@{
+    ViewData["Title"] = "Create Credit Note";
+}
+<style>
+    input[placeholder*="Search"], form.d-flex input[type="search"] {
+        display: none !important;
+    }
+
+    form.d-flex button[type="submit"],
+    form.d-flex a.btn-outline-secondary {
+        display: none !important;
+    }
+</style>
+<div class="container-fluid mt-4">
+    <h2>Create Credit Note</h2>
+    <hr />
+
+    <div id="alertContainer"></div>
+
+    <form id="creditNoteForm">
+        @Html.AntiForgeryToken()
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="SalesInvoiceId" class="control-label">Invoice Number</label>
+                <select id="invoiceDropdown" name="SalesInvoiceId" class="form-control" asp-items="ViewBag.SalesInvoiceId">
+                    <option value="">-- Select Invoice --</option>
+                </select>
+                <span class="text-danger" id="invoiceError"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Reason" class="control-label"></label>
+                <input asp-for="Reason" id="Reason" class="form-control" />
+                <span asp-validation-for="Reason" class="text-danger"></span>
+            </div>
+        </div>
+
+        <!-- جدول أصناف الفاتورة -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-secondary text-white">Invoice Items to Return</div>
+            <div class="card-body p-0">
+                <table class="table table-bordered mb-0" id="invoiceItemsTable">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Original Qty Sold</th>
+                            <th>Unit Price</th>
+                            <th>Quantity To Return</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">Please select an invoice to load items.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <button type="button" id="saveBtn" class="btn btn-primary">Save Credit Note & Update Stock</button>
+            <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // تفعيل الـ Select2
+            $('#invoiceDropdown').select2({
+                width: '100%',
+                placeholder: "-- Select Invoice --",
+                allowClear: true
+            });
+
+            $('#invoiceDropdown').on('change', function() {
+                var invoiceId = $(this).val();
+                loadInvoiceItems(invoiceId);
+            });
+
+            function loadInvoiceItems(invoiceId) {
+                var tbody = $('#invoiceItemsTable tbody'); 
+                tbody.empty(); 
+
+                if (!invoiceId) {
+                    tbody.append('<tr><td colspan="4" class="text-center text-muted">Please select an invoice to load items.</td></tr>');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/CreditNotes/GetInvoiceItems?invoiceId=' + invoiceId,
+                    type: 'GET',
+                    success: function(data) {
+                        tbody.empty(); 
+                        if (data && data.length > 0) {
+                            var addedProducts = {};
+
+                            $.each(data, function(index, item) {
+                                if (addedProducts[item.productId]) {
+                                    return; 
+                                }
+                                addedProducts[item.productId] = true;
+
+                                var row = `<tr>
+                                    <td>
+                                        ${item.productName}
+                                        <input type="hidden" class="item-product-id" value="${item.productId}" />
+                                        <input type="hidden" class="item-unit-price" value="${item.unitPrice}" />
+                                    </td>
+                                    <td>${item.quantity}</td>
+                                    <td>${item.unitPrice}</td>
+                                    <td>
+                                        <input type="number" value="0" min="0" max="${item.quantity}" class="form-control form-control-sm item-qty" />
+                                    </td>
+                                </tr>`;
+                                tbody.append(row);
+                            });
+                        } else {
+                            tbody.append('<tr><td colspan="4" class="text-center text-muted">No items found for this invoice.</td></tr>');
+                        }
+                    },
+                    error: function() {
+                        alert('Could not load invoice items.');
+                    }
+                });
+            }
+
+            // زر الحفظ باستخدام FormData لضمان وصول البيانات للكنترولر بدون أخطاء
+            $('#saveBtn').on('click', function() {
+                var invoiceId = $('#invoiceDropdown').val();
+                if (!invoiceId) {
+                    $('#invoiceError').text('Please select an invoice.');
+                    return;
+                }
+                $('#invoiceError').text('');
+
+                var reason = $('#Reason').val();
+                var token = $('input[name="__RequestVerificationToken"]').val();
+
+                var formData = new FormData();
+                formData.append('SalesInvoiceId', invoiceId);
+                formData.append('Reason', reason ? reason : '');
+                if (token) {
+                    formData.append('__RequestVerificationToken', token);
+                }
+
+                var index = 0;
+                var hasValidSelection = false;
+
+                $('#invoiceItemsTable tbody tr').each(function() {
+                    var row = $(this);
+                    var prodId = row.find('.item-product-id').val();
+                    var unitPrice = row.find('.item-unit-price').val();
+                    var qty = row.find('.item-qty').val();
+
+                    if (prodId && qty) {
+                        var quantityNum = parseInt(qty) || 0;
+                        if (quantityNum > 0) {
+                            hasValidSelection = true;
+                            formData.append(`submittedItems[${index}].ProductId`, prodId);
+                            formData.append(`submittedItems[${index}].Quantity`, quantityNum);
+                            formData.append(`submittedItems[${index}].UnitPrice`, unitPrice || 0);
+                            index++;
+                        }
+                    }
+                });
+
+                if (!hasValidSelection) {
+                    alert('Please select at least one item quantity to return.');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/CreditNotes/Create',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        "RequestVerificationToken": token
+                    },
+                    success: function(response) {
+                        // الآن سنتأكد أن الكنترولر أرجع نجاحاً فعلياً قبل التوجيه
+                        if (response.success) {
+                            window.location.href = '/CreditNotes';
+                        } else {
+                            // عرض رسالة الخطأ الحقيقية القادمة من السيرفر
+                            alert('Failed to save: ' + response.message);
+                        }
+                    },
+                    error: function(xhr) {
+                        alert('A critical error occurred while saving.');
+                        console.log(xhr.responseText);
+                    }
+                });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,88 @@
+@model IEnumerable<EnterpriseSystem.Models.VendorInvoice>
+
+@{
+    ViewData["Title"] = "Vendor Invoices";
+}
+
+<div class="container mt-4">
+    <h1>Vendor Invoices</h1>
+
+    <p>
+        <a asp-action="Create" class="btn btn-success">Create New</a>
+    </p>
+
+    <table class="table table-bordered table-striped align-middle">
+        <thead class="bg-primary text-white">
+            <tr>
+                <th>
+                    @Html.DisplayNameFor(model => model.InvoiceNumber)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.InvoiceDate)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.TotalAmount)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Status)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.PurchaseOrder)
+                </th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model != null && Model.Any())
+            {
+                @foreach (var item in Model) {
+                    <tr>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.InvoiceNumber)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.InvoiceDate)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.TotalAmount)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Status)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.PurchaseOrder.Id)
+                        </td>
+                        <td class="text-center">
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-primary">Edit</a> |
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-warning text-dark fw-bold">Details</a> |
+                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">Delete</a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="6" class="text-center text-muted">No vendor invoices found.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <!-- أزرار التنقل على اليمين بالشكل المرتب -->
+    <div class="mt-4 d-flex justify-content-end align-items-center">
+        <div>
+            @if (ViewBag.CurrentPage > 1)
+            {
+                <a asp-action="Index" asp-route-page="@(ViewBag.CurrentPage - 1)" class="btn btn-dark btn-sm">Previous</a>
+            }
+            
+            <span class="mx-3 fw-bold">Page @ViewBag.CurrentPage of @ViewBag.TotalPages</span>
+
+            @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+            {
+                <a asp-action="Index" asp-route-page="@(ViewBag.CurrentPage + 1)" class="btn btn-dark btn-sm">Next</a>
+            }
+        </div>
+    </div>
+</div>

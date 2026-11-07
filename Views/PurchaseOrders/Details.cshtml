@@ -1,0 +1,258 @@
+@model EnterpriseSystem.Models.PurchaseOrder
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    ViewData["Title"] = "Purchase Order Details";
+    
+    // جلب اسم المستخدم الحالي من الـ Session
+    string currentUsername = HttpContextAccessor.HttpContext?.Session.GetString("Username") ?? "";
+    
+    // دمج التحقق من السيشن مع الـ Roles لضمان عمل الصلاحيات لأي أدمن أو مسؤول
+    bool isSystemAdmin = currentUsername.Equals("admin", StringComparison.OrdinalIgnoreCase) || 
+                         User.IsInRole("Admin");
+
+    bool canCreateOrEdit = isSystemAdmin || 
+                           currentUsername.Equals("po_create", StringComparison.OrdinalIgnoreCase) || 
+                           User.IsInRole("PO_Creator") || 
+                           User.IsInRole("po_create") || 
+                           User.IsInRole("PO Creator");
+
+    bool canApprove = isSystemAdmin || 
+                      currentUsername.Equals("po_approve", StringComparison.OrdinalIgnoreCase) || 
+                      User.IsInRole("PO_Approver") || 
+                      User.IsInRole("po_approve") || 
+                      User.IsInRole("PO Approver");
+}
+
+<!-- كود CSS لإخفاء شريط البحث العام الخاص بالـ Layout في هذه الصفحة فقط -->
+<style>
+    input[placeholder*="Search"], form.d-flex input[type="search"] {
+        display: none !important;
+    }
+
+    form.d-flex button[type="submit"],
+    form.d-flex a.btn-outline-secondary {
+        display: none !important;
+    }
+</style>
+
+<div class="container mt-4">
+    <h1>Details</h1>
+
+    <div>
+        <h4>PurchaseOrder</h4>
+        <hr />
+        <dl class="row">
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.OrderDate)
+            </dt>
+            <dd class="col-sm-10">
+                @Html.DisplayFor(model => model.OrderDate)
+            </dd>
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.Status)
+            </dt>
+            <dd class="col-sm-10">
+                @Html.DisplayFor(model => model.Status)
+            </dd>
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.Branch)
+            </dt>
+            <dd class="col-sm-10">
+                @Html.DisplayFor(model => model.Branch.Name)
+            </dd>
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.Vendor)
+            </dt>
+            <dd class="col-sm-10">
+                @Html.DisplayFor(model => model.Vendor.Name)
+            </dd>
+        </dl>
+    </div>
+
+    <hr />
+
+    <!-- قسم عرض المنتجات وزرار الإضافة (يظهر فقط لمن يملك صلاحية الإنشاء والأدمن) -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Purchase Order Items</h4>
+        @if (Model.Status == "Pending" && canCreateOrEdit)
+        {
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                + Add Existing Product
+            </button>
+        }
+    </div>
+
+    <!-- جدول الـ Items مع إضافة عمود Actions للتعديل والحذف -->
+    <table class="table table-bordered table-striped align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Product Name</th>
+                <th>SKU</th>
+                <th>Quantity</th>
+                <th>Unit Cost</th>
+                <th>Total</th>
+                @if (Model.Status == "Pending" && canCreateOrEdit)
+                {
+                    <th class="text-center">Actions</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.PurchaseOrderItems != null && Model.PurchaseOrderItems.Any())
+            {
+                foreach (var item in Model.PurchaseOrderItems)
+                {
+                    <tr>
+                        <td>@item.Product?.Name</td>
+                        <td>@item.Product?.Sku</td>
+                        <td>@item.Quantity</td>
+                        <td>@item.UnitCost.ToString("C")</td>
+                        <td>@((item.Quantity * item.UnitCost).ToString("C"))</td>
+                        @if (Model.Status == "Pending" && canCreateOrEdit)
+                        {
+                            <td class="text-center">
+                                <!-- زرار التعديل -->
+                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editItemModal-@item.Id">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </button>
+
+                                <!-- زرار الحذف -->
+                                <form asp-action="DeleteOrderItem" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to remove this item?');">
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </form>
+                            </td>
+                        }
+                    </tr>
+
+                    <!-- مودال التعديل الخاص بكل عنصر (يظهر للمصرح لهم فقط) -->
+                    @if (Model.Status == "Pending" && canCreateOrEdit)
+                    {
+                        <div class="modal fade" id="editItemModal-@item.Id" tabindex="-1" aria-hidden="true">
+                          <div class="modal-dialog">
+                            <div class="modal-content">
+                              <form asp-action="EditOrderItem" method="post">
+                                  <div class="modal-header">
+                                    <h5 class="modal-title">Edit Order Item</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                  </div>
+                                  <div class="modal-body">
+                                      <input type="hidden" name="id" value="@item.Id" />
+                                      <input type="hidden" name="purchaseOrderId" value="@Model.Id" />
+
+                                      <div class="mb-3">
+                                          <label class="form-label">Product</label>
+                                          <input type="text" class="form-control" value="@item.Product?.Name" disabled />
+                                      </div>
+
+                                      <div class="mb-3">
+                                          <label class="form-label">Quantity</label>
+                                          <input type="number" name="quantity" class="form-control" value="@item.Quantity" required min="1" />
+                                      </div>
+
+                                      <div class="mb-3">
+                                          <label class="form-label">Unit Cost</label>
+                                          <input type="number" step="0.01" name="unitCost" class="form-control" value="@item.UnitCost" required />
+                                      </div>
+                                  </div>
+                                  <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                                  </div>
+                              </form>
+                            </div>
+                          </div>
+                        </div>
+                    }
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="6" class="text-center text-muted">No items added yet. Click "+ Add Existing Product" to add products.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="mt-3 d-flex justify-content-between align-items-center">
+        <div>
+            @if (canCreateOrEdit)
+            {
+                <a asp-action="Edit" asp-route-id="@Model?.Id" class="btn btn-primary">Edit Order</a> 
+                <span>|</span>
+            }
+            <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+        </div>
+
+        <!-- زرار اعتماد الأوردر وتحديث المخزن (يظهر فقط لمسؤول الاعتماد أو الأدمن) -->
+        @if (Model.Status == "Pending" && canApprove)
+        {
+            <form asp-action="CompleteOrder" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Are you sure you want to approve this order and update inventory?');">
+                <button type="submit" class="btn btn-warning fw-bold">
+                    <i class="bi bi-check-circle"></i> Approve & Update Inventory
+                </button>
+            </form>
+        }
+    </div>
+</div>
+
+<!-- Modal إضافة منتج جديد -->
+@if (Model.Status == "Pending" && canCreateOrEdit)
+{
+    <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form asp-action="AddExistingProductToOrder" method="post">
+              <div class="modal-header">
+                <h5 class="modal-title" id="addProductModalLabel">Add Existing Product to Order</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                  <input type="hidden" name="purchaseOrderId" value="@Model.Id" />
+
+                  <div class="mb-3">
+                      <label class="form-label">Select Product</label>
+                      <select name="productId" class="form-control" asp-items="ViewBag.ProductId" id="productSelect" required>
+                          <option value="">-- Select Existing Product --</option>
+                      </select>
+                  </div>
+
+                  <div class="mb-3">
+                      <label class="form-label">Quantity</label>
+                      <input type="number" name="quantity" class="form-control" required min="1" />
+                  </div>
+
+                  <div class="mb-3">
+                      <label class="form-label">Unit Cost</label>
+                      <input type="number" step="0.01" name="unitCost" class="form-control" required />
+                  </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-success">Add Item</button>
+              </div>
+          </form>
+        </div>
+      </div>
+    </div>
+}
+
+@section Scripts {
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            $('#productSelect').select2({
+                dropdownParent: $('#addProductModal'),
+                width: '100%',
+                placeholder: "-- Select Existing Product --",
+                allowClear: true
+            });
+        });
+    </script>
+}

@@ -1,0 +1,4 @@
+pyodbc
+faker
+python-dotenv
+groq

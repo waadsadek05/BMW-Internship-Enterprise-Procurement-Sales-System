@@ -1,0 +1,331 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - EnterpriseSystem</title>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/EnterpriseSystem.styles.css" asp-append-version="true" />
+
+    <!-- كود التنسيق الشامل: منع وميض العنوان، وتنسيق الأزرار وزرار الـ Create -->
+    <style>
+        /* إخفاء كلمة Index فوراً لمنع الوميض أو الديلاي */
+        h1 {
+            visibility: hidden;
+            position: relative;
+        }
+        
+        /* استبدال العنوان تلقائياً بناءً على اسم الصفحة في الـ URL */
+        body.page-products h1::after { content: "Products"; visibility: visible; position: absolute; top: 0; left: 0; }
+        body.page-customers h1::after { content: "Customers"; visibility: visible; position: absolute; top: 0; left: 0; }
+        body.page-warehouses h1::after { content: "Warehouses"; visibility: visible; position: absolute; top: 0; left: 0; }
+        body.page-branches h1::after { content: "Branches"; visibility: visible; position: absolute; top: 0; left: 0; }
+        body.page-categories h1::after { content: "Categories"; visibility: visible; position: absolute; top: 0; left: 0; }
+        body.page-vendors h1::after { content: "Vendors"; visibility: visible; position: absolute; top: 0; left: 0; }
+        body.page-purchaseorders h1::after { content: "Purchase Orders"; visibility: visible; position: absolute; top: 0; left: 0; }
+        body.page-vendorinvoices h1::after { content: "Vendor Invoices"; visibility: visible; position: absolute; top: 0; left: 0; }
+        body.page-salesorders h1::after { content: "Sales Orders"; visibility: visible; position: absolute; top: 0; left: 0; }
+        body.page-salesinvoices h1::after { content: "Sales Invoices"; visibility: visible; position: absolute; top: 0; left: 0; }
+        body.page-creditnotes h1::after { content: "Credit Notes"; visibility: visible; position: absolute; top: 0; left: 0; }
+        body.page-branchinventory h1::after { content: "Branch Inventory"; visibility: visible; position: absolute; top: 0; left: 0; }
+        body h1::after { content: "Management"; visibility: visible; position: absolute; top: 0; left: 0; }
+
+        /* زرار Create New */
+        a[asp-action='Create'], a[href*='Create'] {
+            background-color: #198754 !important;
+            color: white !important;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: 500;
+        }
+        a[asp-action='Create']:hover, a[href*='Create']:hover {
+            background-color: #157347 !important;
+        }
+
+        /* أزرار الجدول (Edit, Details, Delete) */
+        table.table td a[href*="Edit"] {
+            background-color: #0d6efd !important;
+            color: white !important;
+            padding: 5px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 2px;
+        }
+        table.table td a[href*="Edit"]:hover {
+            background-color: #0b5ed7 !important;
+        }
+
+        table.table td a[href*="Delete"] {
+            background-color: #dc3545 !important;
+            color: white !important;
+            padding: 5px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 2px;
+        }
+        table.table td a[href*="Delete"]:hover {
+            background-color: #bb2d3b !important;
+        }
+
+        table.table td a[href*="Details"] {
+            background-color: #ffc107 !important;
+            color: #000 !important;
+            padding: 5px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 2px;
+        }
+        table.table td a[href*="Details"]:hover {
+            background-color: #ffca2c !important;
+        }
+    </style>
+
+    <!-- كود سريع يحدد كلاس الصفحة في الـ Body فوراً لمنع أي تأخير في العنوان -->
+    <script>
+        var path = window.location.pathname.split('/')[1];
+        if (path) {
+            document.documentElement.className += ' page-' + path.toLowerCase();
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container-fluid">
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">EnterpriseSystem</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        @if (User.IsInRole("Admin")){
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            </li>
+                        }
+                        
+
+                        <!-- Procurement & Purchasing (يظهر للأدمن، صانع أو معتمد طلبيات الشراء) -->
+                        @if (User.IsInRole("Admin") || User.IsInRole("PO_Creator") || User.IsInRole("PO_Approver") || User.IsInRole("PO Approver") || User.IsInRole("po_approver"))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Procurement & Purchasing
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" asp-controller="PurchaseOrders" asp-action="Index">Purchase Orders (PO)</a></li>
+                                    @if (User.IsInRole("Admin")){
+                                        <li><a class="dropdown-item" asp-controller="VendorInvoices" asp-action="Index">Vendor Invoices</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Vendors" asp-action="Index">Vendors</a></li>
+                                    }
+                                </ul>
+                            </li>
+                        }
+
+                        <!-- Inventory & Warehouses (يظهر للأدمن فقط أو يمكنك إضافة الأدوار الأخرى هنا) -->
+                        @if (User.IsInRole("Admin"))
+                        { 
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Inventory & Warehouses
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" asp-controller="Warehouses" asp-action="Index">Warehouses</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Branches" asp-action="Index">Branches</a></li>
+                                    <li><a class="dropdown-item" asp-controller="BranchInventory" asp-action="Index">Branch Inventory</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Products" asp-action="Index">Products</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Categories" asp-action="Index">Categories</a></li>
+                                </ul>
+                            </li>
+                        }
+
+                        <!-- Sales Operations (يظهر للأدمن، صانع أو معتمد المبيعات) -->
+                        @if (User.IsInRole("Admin") || User.IsInRole("Sales_Creator") || User.IsInRole("Sales_Approver"))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Sales Operations
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" asp-controller="SalesOrders" asp-action="Index">Sales Orders (SO)</a></li>
+                                    @if (User.IsInRole("Admin")){
+                                        <li><a class="dropdown-item" asp-controller="SalesInvoices" asp-action="Index">Sales Invoices</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Customers" asp-action="Index">Customers</a></li>
+                                    }
+                                </ul>
+                            </li>
+                        }
+
+                        <!-- Returns & Credit Processing (يظهر للأدمن ومسؤولي المبيعات) -->
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Returns & Credit Processing
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" asp-controller="CreditNotes" asp-action="Index">Credit Notes</a></li>
+                                </ul>
+                            </li>
+                        }
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                        </li>
+                    </ul>
+
+                   <!-- قسم تسجيل الدخول والخروج بأيقونة المستخدم المنسدلة في أقصى اليمين -->
+                    <ul class="navbar-nav align-items-center">
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle d-flex align-items-center text-dark fw-bold" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <!-- أيقونة مستخدم SVG -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-person-circle me-1 text-primary" viewBox="0 0 16 16">
+                                        <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
+                                        <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/>
+                                    </svg>
+                                    <span>@User.Identity.Name</span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="userDropdown">
+
+                                    <li>
+                                        <div class="px-2">
+                                            <a class="dropdown-item text-dark fw-bold rounded bg-light text-center mb-1" asp-controller="Account" asp-action="Profile">Profile</a>
+                                        </div>
+                                    </li>
+    
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <!-- إضافة خيارات إدارة المستخدمين للأدمن فقط هنا -->
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <li>
+                                            <div class="px-2">
+                                                <a class="dropdown-item text-dark fw-bold rounded bg-light text-center mb-1" asp-controller="Users" asp-action="Index">Manage Users</a>
+                                            </div>
+                                        </li>
+
+                                        <li>
+                                            <div class="px-2">
+                                                <a class="dropdown-item text-dark fw-bold rounded bg-light text-center mb-1 py-2" asp-controller="Roles" asp-action="Index">Manage Roles</a>
+                                            </div>
+                                        </li>
+
+                                        <li><hr class="dropdown-divider"></li>
+
+                                    }
+
+                                    <li>
+                                        <form asp-controller="Account" asp-action="Logout" method="post" class="px-2">
+                                            <button type="submit" class="dropdown-item text-danger fw-bold rounded bg-light text-center">Logout</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark fw-bold" asp-controller="Account" asp-action="Login">Login</a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2026 - EnterpriseSystem - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    <!-- كود البحث الذكي وتفعيل كلاس الـ Body بعد اكتمال التحميل -->
+    <script>
+document.addEventListener("DOMContentLoaded", function () {
+    var path = window.location.pathname.split('/')[1];
+    if (path) {
+        document.body.classList.add('page-' + path.toLowerCase());
+    }
+
+    var table = document.querySelector("table.table");
+    if (!table) return;
+
+    var urlParams = new URLSearchParams(window.location.search);
+    var currentSearchValue = urlParams.get('searchTerm') || '';
+
+    // إنشاء فورم البحث
+    var searchForm = document.createElement("form");
+    searchForm.method = "get";
+    searchForm.action = window.location.pathname;
+    searchForm.className = "d-flex align-items-center";
+    searchForm.style.maxWidth = "400px";
+
+    var searchInput = document.createElement("input");
+    searchInput.type = "text";
+    searchInput.name = "searchTerm"; 
+    searchInput.value = currentSearchValue;
+    searchInput.className = "form-control me-2";
+    searchInput.placeholder = "Search database...";
+    searchInput.setAttribute("autocomplete", "off");
+
+    var searchBtn = document.createElement("button");
+    searchBtn.type = "submit";
+    searchBtn.className = "btn btn-outline-primary btn-sm me-1";
+    searchBtn.innerHTML = "Search";
+
+    // زرار مسح البحث للرجوع لكل البيانات فوراً
+    var clearBtn = document.createElement("a");
+    clearBtn.href = window.location.pathname;
+    clearBtn.className = "btn btn-outline-secondary btn-sm";
+    clearBtn.innerHTML = "Clear";
+
+    searchForm.appendChild(searchInput);
+    searchForm.appendChild(searchBtn);
+    searchForm.appendChild(clearBtn);
+
+    var createLink = document.querySelector("a[asp-action='Create'], a[href*='Create']");
+    
+    if (createLink) {
+        var container = document.createElement("div");
+        container.className = "d-flex justify-content-between align-items-center mb-3";
+        
+        var parentP = createLink.closest("p");
+        if (parentP) {
+            parentP.replaceWith(container);
+        } else {
+            createLink.parentNode.insertBefore(container, createLink);
+        }
+        
+        container.appendChild(createLink);
+        container.appendChild(searchForm);
+    } else {
+        var searchDiv = document.createElement("div");
+        searchDiv.className = "mb-3";
+        searchDiv.style.maxWidth = "400px";
+        searchDiv.appendChild(searchForm);
+        table.parentNode.insertBefore(searchDiv, table);
+    }
+});
+</script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

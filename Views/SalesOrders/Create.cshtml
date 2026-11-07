@@ -1,0 +1,256 @@
+@model EnterpriseSystem.Models.SalesOrder
+
+@{
+    ViewData["Title"] = "Create Sales Order";
+}
+
+<h1>Create Sales Order</h1>
+
+<hr />
+
+<style>
+    input[placeholder*="Search"], form.d-flex input[type="search"] {
+        display: none !important;
+    }
+
+    form.d-flex button[type="submit"],
+    form.d-flex a.btn-outline-secondary {
+        display: none !important;
+    }
+</style>
+
+<div class="row">
+    <div class="col-md-10">
+        <form asp-action="Create">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            
+            <div class="form-group mb-3">
+                <label asp-for="CustomerId" class="control-label">Customer</label>
+                <select asp-for="CustomerId" class="form-control" asp-items="ViewBag.CustomerId"></select>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label asp-for="BranchId" class="control-label">Branch</label>
+                <select asp-for="BranchId" id="branchDropdown" class="form-control" asp-items="ViewBag.BranchId" onchange="onBranchChanged()">
+                    <option value="">-- Select Branch First --</option>
+                </select>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label asp-for="UserId" class="control-label">User / Sales Rep</label>
+                <select asp-for="UserId" class="form-control" asp-items="ViewBag.UserId"></select>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="Status" class="control-label">Status</label>
+                <select asp-for="Status" class="form-control">
+                    <option value="Pending">Pending</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                </select>
+                <span asp-validation-for="Status" class="text-danger"></span>
+            </div>
+
+            <h3 class="mt-4">Order Items</h3>
+            <hr />
+            
+            <!-- قائمة المنتجات للبحث الفوري (ستتعبأ ديناميكياً حسب الفرع المختار) -->
+            <datalist id="productsList">
+            </datalist>
+
+            <table class="table table-bordered" id="itemsTable">
+    <thead>
+        <tr>
+            <th style="width: 30%;">Product (Type to search)</th>
+            <th style="width: 25%;">Warehouse & Stock</th>
+            <th style="width: 15%;">Unit Price</th>
+            <th style="width: 15%;">Quantity</th>
+            <th style="width: 15%;">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>
+                <input type="text" list="productsList" class="form-control product-search" placeholder="Select branch first..." oninput="onProductSelected(this)" disabled />
+                <input type="hidden" name="OrderItems[0].ProductId" class="product-id-hidden" />
+            </td>
+            <td>
+                <div class="input-group">
+                    <input type="text" class="form-control available-stock" readonly value="0" />
+                    <input type="text" class="form-control warehouse-name bg-light" readonly placeholder="Warehouse" />
+                </div>
+            </td>
+            <td>
+                <input type="number" step="0.01" name="OrderItems[0].UnitPrice" class="form-control item-price" readonly />
+            </td>
+            <td>
+                <input type="number" name="OrderItems[0].Quantity" class="form-control item-qty" value="1" min="1" oninput="validateQuantity(this)" />
+            </td>
+            <td>
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">Delete</button>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+            <button type="button" class="btn btn-secondary btn-sm mb-3" onclick="addRow()">+ Add Another Product</button>
+
+            <div class="form-group mt-3">
+                <input type="submit" value="Create Order" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+
+    <script>
+        let rowIndex = 0;
+
+        function onBranchChanged() {
+            let branchId = document.getElementById("branchDropdown").value;
+            let datalist = document.getElementById("productsList");
+            datalist.innerHTML = "";
+
+            let rows = document.querySelectorAll("#itemsTable tbody tr");
+            rows.forEach((row, index) => {
+                if (index > 0) row.remove();
+                else {
+                    let input = row.querySelector(".product-search");
+                    input.value = "";
+                    input.disabled = !branchId;
+                    input.placeholder = branchId ? "Type to search product..." : "Select branch first...";
+                    row.querySelector(".product-id-hidden").value = "";
+                    row.querySelector(".available-stock").value = "0";
+                    row.querySelector(".warehouse-name").value = "";
+                    row.querySelector(".item-price").value = "";
+                    row.querySelector(".item-qty").value = "1";
+                }
+            });
+
+            if (!branchId) return;
+
+            fetch(`/SalesOrders/GetProductsByBranch?branchId=${branchId}`)
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(p => {
+                        let option = document.createElement("option");
+                        option.value = p.name;
+                        option.setAttribute("data-id", p.id);
+                        option.setAttribute("data-price", p.sellingPrice);
+                        option.setAttribute("data-stock", p.stock);
+                        option.setAttribute("data-warehouse", p.warehouseName || "Main Warehouse");
+                        datalist.appendChild(option);
+                    });
+                });
+        }
+
+        function addRow() {
+            let branchId = document.getElementById("branchDropdown").value;
+            if (!branchId) {
+                alert("Please select a branch first before adding products.");
+                return;
+            }
+
+            rowIndex++;
+            let table = document.getElementById("itemsTable").getElementsByTagName('tbody')[0];
+            let newRow = table.insertRow();
+            
+            newRow.innerHTML = `
+                <td>
+                    <input type="text" list="productsList" class="form-control product-search" placeholder="Type to search product..." oninput="onProductSelected(this)" />
+                    <input type="hidden" name="OrderItems[${rowIndex}].ProductId" class="product-id-hidden" />
+                </td>
+                <td>
+                    <div class="input-group">
+                        <input type="text" class="form-control available-stock" readonly value="0" />
+                        <input type="text" class="form-control warehouse-name bg-light" readonly placeholder="Warehouse" />
+                    </div>
+                </td>
+                <td>
+                    <input type="number" step="0.01" name="OrderItems[${rowIndex}].UnitPrice" class="form-control item-price" readonly />
+                </td>
+                <td>
+                    <input type="number" name="OrderItems[${rowIndex}].Quantity" class="form-control item-qty" value="1" min="1" oninput="validateQuantity(this)" />
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">Delete</button>
+                </td>
+            `;
+        }
+
+        function removeRow(button) {
+            let row = button.closest("tr");
+            let tableBody = document.getElementById("itemsTable").getElementsByTagName('tbody')[0];
+            if(tableBody.rows.length > 1) {
+                row.remove();
+                updateRowIndexes();
+            } else {
+                alert("At least one product row is required.");
+            }
+        }
+
+        function updateRowIndexes() {
+            let rows = document.querySelectorAll("#itemsTable tbody tr");
+            rows.forEach((row, index) => {
+                let hiddenIdInput = row.querySelector(".product-id-hidden");
+                let priceInput = row.querySelector(".item-price");
+                let qtyInput = row.querySelector(".item-qty");
+
+                if (hiddenIdInput) hiddenIdInput.name = `OrderItems[${index}].ProductId`;
+                if (priceInput) priceInput.name = `OrderItems[${index}].UnitPrice`;
+                if (qtyInput) qtyInput.name = `OrderItems[${index}].Quantity`;
+            });
+            rowIndex = rows.length - 1;
+        }
+
+        function onProductSelected(inputElement) {
+            let row = inputElement.closest("tr");
+            let val = inputElement.value;
+            let datalist = document.getElementById('productsList');
+            let options = datalist.options;
+            
+            let productId = "";
+            let price = 0;
+            let stock = 0;
+            let warehouse = "";
+
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].value === val) {
+                    productId = options[i].getAttribute("data-id");
+                    price = options[i].getAttribute("data-price");
+                    stock = options[i].getAttribute("data-stock");
+                    warehouse = options[i].getAttribute("data-warehouse");
+                    break;
+                }
+            }
+
+            if (!productId) return;
+
+            row.querySelector(".product-id-hidden").value = productId;
+            row.querySelector(".item-price").value = price || 0;
+            row.querySelector(".available-stock").value = stock || 0;
+            row.querySelector(".warehouse-name").value = warehouse || "";
+            
+            let qtyInput = row.querySelector(".item-qty");
+            qtyInput.value = 1;
+            qtyInput.setAttribute("max", stock);
+        }
+
+        function validateQuantity(qtyInput) {
+            let row = qtyInput.closest("tr");
+            let stockVal = parseInt(row.querySelector(".available-stock").value) || 0;
+            let currentQty = parseInt(qtyInput.value) || 0;
+
+            if (currentQty > stockVal) {
+                alert("The requested quantity cannot exceed the available stock (" + stockVal + ")!");
+                qtyInput.value = stockVal;
+            }
+        }
+    </script>
+}

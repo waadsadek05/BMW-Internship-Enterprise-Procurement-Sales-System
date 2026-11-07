@@ -1,0 +1,19 @@
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container-fluid mt-4">
+    <div class="jumbotron bg-light p-5 rounded shadow-sm mb-4 border text-center">
+        <h1 class="display-4 text-primary fw-bold">Welcome, @User.Identity.Name</h1>
+        <p class="lead text-muted">Use the navigation bar above or check your pending approvals below.</p>
+        <hr class="my-4">
+        
+        <!-- زرار الطلبات المعلقة يظهر لمسؤول المشتريات أو المبيعات فقط -->
+        @if (User.IsInRole("PO_Approver") || User.IsInRole("Sales_Approver") )
+        {
+            <a asp-action="Approvals" class="btn btn-primary btn-lg fw-bold text-white shadow-sm">
+                <i class="fas fa-bell me-2"></i> View Pending Approvals & Requests
+            </a>
+        }
+    </div>
+</div>
